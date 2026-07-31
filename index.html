@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      ;(function () {
+        const saved = localStorage.getItem('theme')
+        document.documentElement.setAttribute('data-theme', saved ?? 'dark')
+      })()
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stream Ward — crypto-lab</title>
+    <meta
+      name="description"
+      content="Streaming authenticated encryption: a chained XChaCha20-Poly1305 construction that rejects truncated, reordered and dropped segments, next to a naive split that accepts all three."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Stream Ward — crypto-lab" />
+    <meta
+      property="og:description"
+      content="Streaming authenticated encryption: a chained XChaCha20-Poly1305 construction that rejects truncated, reordered and dropped segments, next to a naive split that accepts all three."
+    />
+    <meta property="og:url" content="https://systemslibrarian.github.io/crypto-lab-stream-ward/" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Stream Ward — crypto-lab" />
+    <meta
+      name="twitter:description"
+      content="Streaming authenticated encryption: a chained XChaCha20-Poly1305 construction that rejects truncated, reordered and dropped segments, next to a naive split that accepts all three."
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡</text></svg>"
+    />
+  </head>
+  <body>
+<!-- BEGIN crypto-lab shared header — managed; edit shared-header.html + re-run reapply-header.py
+     Identical on every lab. Self-contained styles. Accents use each demo's own
+     --accent CSS variable (teal #35d6bb fallback). The ONLY per-repo value is the
+     repo name (crypto-lab-stream-ward) in the GitHub link.
+     Source of truth: github.com/systemslibrarian/crypto-lab/shared-header.html -->
+<style>
+  .cl-topbar{
+    /* The bar is always dark (#0b1512) regardless of page theme, so header
+       text must always be light. Mix each lab's --accent toward near-white so
+       the hue still tints the brand but contrast stays >=4.5:1 on the bar even
+       when a lab's accent is dark (e.g. a light-theme #1a56db). */
+    --cl-ink: color-mix(in srgb, var(--accent, #35d6bb) 60%, #eafff8);
+    display:flex;align-items:center;justify-content:space-between;gap:1rem;
+    padding:.7rem clamp(.9rem,3vw,2rem);
+    background:#0b1512;
+    border-bottom:1px solid color-mix(in srgb, var(--accent, #35d6bb) 22%, transparent);
+    font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    position:sticky;top:0;z-index:1000;
+  }
+  .cl-brand{display:flex;align-items:center;gap:.8rem;text-decoration:none}
+  .cl-badge{
+    flex:0 0 auto;display:grid;place-items:center;width:40px;height:40px;
+    border:1.5px solid var(--accent, #35d6bb);border-radius:10px;
+    color:var(--cl-ink);font-weight:700;font-size:.95rem;letter-spacing:.05em;
+  }
+  .cl-brand-text{display:flex;flex-direction:column;line-height:1.15}
+  .cl-title{color:#eafff8;font-weight:700;font-size:1.05rem;letter-spacing:.12em}
+  .cl-sub{color:#5e8b80;font-size:.72rem;letter-spacing:.04em}
+  .cl-actions{display:flex;align-items:center;gap:.5rem}
+  .cl-btn{
+    display:inline-flex;align-items:center;gap:.4rem;
+    padding:.5rem .85rem;border-radius:10px;
+    border:1px solid color-mix(in srgb, var(--accent, #35d6bb) 38%, transparent);
+    background:transparent;color:var(--cl-ink);cursor:pointer;
+    font:inherit;font-size:.78rem;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;text-decoration:none;transition:background .15s,border-color .15s,color .15s;
+  }
+  .cl-btn:hover{
+    background:color-mix(in srgb, var(--accent, #35d6bb) 14%, transparent);
+    border-color:var(--accent, #35d6bb);color:#eafff8;
+  }
+  .cl-btn svg{width:15px;height:15px}
+  .cl-icon{padding:.5rem .6rem;font-size:.95rem}
+  /* Skip-to-content link: first focusable element so keyboard users can bypass
+     this sticky header (WCAG 2.4.1). Hidden until focused. Fixed light-on-dark
+     pair (not --accent, which can be a dark hue on some labs) keeps contrast AA. */
+  .cl-skip-link{
+    position:absolute;left:.5rem;top:-3rem;z-index:1001;
+    padding:.55rem 1rem;border-radius:0 0 10px 10px;
+    background:#eafff8;color:#0b1512;
+    font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    font-weight:700;font-size:.8rem;letter-spacing:.04em;text-decoration:none;
+    transition:top .15s ease;
+  }
+  .cl-skip-link:focus{top:0;outline:2px solid var(--accent,#35d6bb);outline-offset:2px;}
+  /* hide each lab's own in-page theme toggle — the bar's toggle replaces it.
+     element stays in the DOM so the lab's theme JS keeps working. */
+  body :is(#theme-toggle,#themeToggle,.theme-toggle,.theme-toggle-btn,[data-theme-toggle]):not(#cl-theme-toggle){display:none!important}
+  @media(max-width:560px){
+    .cl-sub{display:none}
+    .cl-btn span{display:none}
+    .cl-btn svg{margin:0}
+  }
+</style>
+<a class="cl-skip-link" href="#app">Skip to content</a>
+<header class="cl-topbar" role="banner" aria-label="Crypto Lab">
+  <a class="cl-brand" href="https://crypto-lab.systemslibrarian.dev/" aria-label="Crypto Lab home">
+    <span class="cl-badge">CL</span>
+    <span class="cl-brand-text">
+      <span class="cl-title">CRYPTO LAB</span>
+      <span class="cl-sub">systemslibrarian.dev</span>
+    </span>
+  </a>
+  <nav class="cl-actions" aria-label="Crypto Lab navigation">
+    <a class="cl-btn" href="https://crypto-lab.systemslibrarian.dev/" aria-label="Crypto Lab menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <span>Menu</span>
+    </a>
+    <a class="cl-btn" href="https://github.com/systemslibrarian/crypto-lab-stream-ward" target="_blank" rel="noopener" aria-label="View this project on GitHub">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7 0-.7 0-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C17.3 5 18.3 5.3 18.3 5.3c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+      <span>GitHub</span>
+    </a>
+    <button class="cl-btn cl-icon" id="cl-theme-toggle" type="button" aria-label="Toggle color theme" title="Toggle theme">☀</button>
+  </nav>
+</header>
+<script>
+  (function () {
+    var t = document.getElementById('cl-theme-toggle');
+    if (t) {
+      var cur = function(){ return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'; };
+      var paint = function(){ t.textContent = cur() === 'light' ? '☾' : '☀'; };
+      paint();
+      t.addEventListener('click', function () {
+        var next = cur() === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        try { localStorage.setItem('theme', next); } catch (e) {}
+        paint();
+      });
+    }
+    // A page may have only one banner landmark. This shared site header is it;
+    // demote any banner a lab also declared on its own page header (explicit
+    // role="banner", or an implicit <header> child of <body>) so landmarks stay unique.
+    function dedupeBanner() {
+      var bar = document.querySelector('.cl-topbar');
+      if (!bar) return;
+      document.querySelectorAll('[role="banner"]').forEach(function (el) {
+        if (el !== bar) el.setAttribute('role', 'group');
+      });
+      Array.prototype.forEach.call(document.body ? document.body.children : [], function (el) {
+        if (el.tagName === 'HEADER' && el !== bar && !el.hasAttribute('role')) el.setAttribute('role', 'group');
+      });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', dedupeBanner);
+    else dedupeBanner();
+  })();
+</script>
+<!-- END crypto-lab shared header -->
+    <main id="app">
+      <header class="cl-hero">
+        <div class="cl-hero-main">
+          <h1 class="cl-hero-title">Stream Ward</h1>
+          <p class="cl-hero-sub">Streaming AEAD · XChaCha20-Poly1305 · secretstream-style chaining</p>
+          <p class="cl-hero-desc">
+            Watch a one-shot decrypt buffer a whole file into an OOM kill while a chunked stream holds flat — then
+            truncate, reorder and drop segments against a real chained verifier, and against a naive split that never
+            notices.
+          </p>
+        </div>
+        <aside class="cl-hero-why" aria-label="Why it matters">
+          <span class="cl-hero-why-label">WHY IT MATTERS</span>
+          <p class="cl-hero-why-text">
+            Every backup tool, video player and object store decrypts files larger than its own RAM, so all of them
+            chunk. Chunking without binding the chunks together lets anyone who can touch the bytes reorder or delete
+            them and still hand your application a perfectly "authentic" file.
+          </p>
+        </aside>
+      </header>
+
+      <section class="card intro" aria-labelledby="intro-h">
+        <h2 id="intro-h">What is this?</h2>
+        <p>
+          Authenticated encryption gives you one tag — one short fingerprint — that proves a message came from someone
+          holding the key and was not altered. To check that tag you need the whole message, which is fine for a chat
+          line and impossible for a 10&nbsp;GiB video. So real systems cut the file into segments and authenticate each
+          one separately.
+        </p>
+        <p>
+          That fixes the memory problem and quietly creates a new one. Each segment is now a valid little message on its
+          own, so an attacker who cannot read or change a single byte can still <em>rearrange</em> them: play chapter
+          five before chapter three, delete the paragraph they dislike, cut the file short. Nothing was forged, so
+          nothing fails — unless the segments were chained together in the first place.
+        </p>
+        <p class="intro-lead">
+          This page shows both halves: <strong>the memory wall</strong> that forces you to chunk, and
+          <strong>the authentication trap</strong> that chunking walks you into.
+        </p>
+      </section>
+
+      <!-- ── Exhibit 1 ─────────────────────────────────────────────────────── -->
+      <section class="card" aria-labelledby="mem-h">
+        <div class="exhibit-head">
+          <span class="exhibit-num">Exhibit 1</span>
+          <h2 id="mem-h">The RAM ceiling</h2>
+          <span class="chip chip-model">MODELLED</span>
+        </div>
+        <p class="lede">
+          One-shot AEAD cannot release a single byte of plaintext until the tag over the entire file verifies. So the
+          entire ciphertext has to be resident first, and then the plaintext buffer is allocated on top of it. Push the
+          file size up and watch where that ends.
+        </p>
+
+        <p class="honesty-note" id="mem-honesty">
+          Memory footprint is modelled from tracked buffer allocations, not measured process RSS. The chunk-chaining
+          below uses real cryptographic operations.
+        </p>
+
+        <div class="controls" role="group" aria-label="Memory model controls">
+          <div class="control control-wide">
+            <label for="file-size">File size</label>
+            <input
+              type="range"
+              id="file-size"
+              min="0"
+              max="100"
+              value="100"
+              step="1"
+              aria-describedby="file-size-out"
+            />
+            <output id="file-size-out" for="file-size">10.0 GiB</output>
+          </div>
+          <div class="control">
+            <label for="chunk-size">Segment size</label>
+            <div class="select-wrap">
+              <select id="chunk-size">
+                <option value="16384">16 KiB</option>
+                <option value="65536" selected>64 KiB</option>
+                <option value="262144">256 KiB</option>
+                <option value="1048576">1 MiB</option>
+              </select>
+            </div>
+          </div>
+          <div class="control">
+            <label for="ram-limit">RAM available</label>
+            <div class="select-wrap">
+              <select id="ram-limit">
+                <option value="536870912">512 MiB</option>
+                <option value="1073741824">1 GiB</option>
+                <option value="2147483648" selected>2 GiB</option>
+                <option value="4294967296">4 GiB</option>
+                <option value="8589934592">8 GiB</option>
+              </select>
+            </div>
+          </div>
+          <button type="button" id="run-memory" class="btn btn-primary">Run both decrypts</button>
+        </div>
+
+        <div class="meters">
+          <article class="meter-panel" id="panel-oneshot" aria-labelledby="oneshot-h">
+            <div class="meter-head">
+              <h3 id="oneshot-h">One-shot decrypt</h3>
+              <span class="meter-sub">single tag over the whole file</span>
+            </div>
+            <div class="meter-graphic" aria-hidden="true">
+              <div class="meter-track">
+                <div class="meter-fill" id="fill-oneshot"></div>
+                <div class="meter-ceiling" id="ceil-oneshot"><span class="meter-ceiling-label">RAM</span></div>
+              </div>
+            </div>
+            <div class="trace" id="trace-oneshot" aria-hidden="true"></div>
+            <p class="meter-status" id="status-oneshot" role="status">Idle — press “Run both decrypts”.</p>
+            <dl class="readout">
+              <div><dt>Peak footprint</dt><dd id="peak-oneshot">—</dd></div>
+              <div><dt>Needs to finish</dt><dd id="ratio-oneshot">—</dd></div>
+              <div><dt>Buffer allocations</dt><dd id="allocs-oneshot">—</dd></div>
+            </dl>
+          </article>
+
+          <article class="meter-panel" id="panel-chunked" aria-labelledby="chunked-h">
+            <div class="meter-head">
+              <h3 id="chunked-h">Chunked stream</h3>
+              <span class="meter-sub">one tag per segment</span>
+            </div>
+            <div class="meter-graphic" aria-hidden="true">
+              <div class="meter-track">
+                <div class="meter-fill" id="fill-chunked"></div>
+                <div class="meter-ceiling" id="ceil-chunked"><span class="meter-ceiling-label">RAM</span></div>
+              </div>
+            </div>
+            <div class="trace" id="trace-chunked" aria-hidden="true"></div>
+            <div class="zoom">
+              <span class="zoom-label"
+                >Same trace, magnified to this panel's own peak — one segment in, one segment out</span
+              >
+              <div class="zoom-trace" id="zoomtrace-chunked" aria-hidden="true"></div>
+            </div>
+            <p class="meter-status" id="status-chunked" role="status">Idle — press “Run both decrypts”.</p>
+            <dl class="readout">
+              <div><dt>Peak footprint</dt><dd id="peak-chunked">—</dd></div>
+              <div><dt>Needs to finish</dt><dd id="ratio-chunked">—</dd></div>
+              <div><dt>Segments processed</dt><dd id="allocs-chunked">—</dd></div>
+            </dl>
+          </article>
+        </div>
+
+        <p class="verdict-line" id="memory-verdict" role="status">
+          Both meters are drawn to the same scale, so the flat line really is that flat.
+        </p>
+
+        <details class="disclosure">
+          <summary>Why one-shot needs two copies of the file</summary>
+          <p>
+            A Poly1305 tag is computed over every byte of the ciphertext. Until the last byte has gone through the
+            accumulator you do not know whether the first byte is trustworthy, so a correct one-shot implementation
+            refuses to emit plaintext early — that refusal is the whole security property. The ciphertext therefore has
+            to be fully resident. Decryption then writes into a <em>separate</em> output buffer (this is what
+            <code>crypto_aead_xchacha20poly1305_ietf_decrypt</code> and WebCrypto's <code>decrypt()</code> both do), and
+            for a moment both buffers are live: peak ≈ 2 × file size.
+          </p>
+          <p>
+            A chunked stream verifies a tag every segment, so it can hand that segment onward and free it before reading
+            the next. Peak ≈ 2 × <em>segment</em> size — a number you choose, rather than one your users choose for you
+            by picking a big file.
+          </p>
+        </details>
+      </section>
+
+      <!-- ── Exhibit 2 ─────────────────────────────────────────────────────── -->
+      <section class="card" aria-labelledby="chain-h">
+        <div class="exhibit-head">
+          <span class="exhibit-num">Exhibit 2</span>
+          <h2 id="chain-h">The chain</h2>
+          <span class="chip chip-real">REAL CRYPTO</span>
+        </div>
+        <p class="lede">
+          Everything below runs actual XChaCha20-Poly1305 and SHA-256 in your browser. The message is a settlement
+          batch, cut into six segments — chosen so that moving a line changes what a bank would <em>do</em>, not just
+          which bytes it received.
+        </p>
+
+        <fieldset class="mode-switch">
+          <legend>Construction</legend>
+          <div class="mode-options">
+            <label class="mode-option" for="mode-chained">
+              <input type="radio" name="mode" id="mode-chained" value="chained" checked />
+              <span class="mode-body">
+                <span class="mode-title">Chained — Stream Ward</span>
+                <span class="mode-desc">
+                  Every tag covers a rolling chain state plus the segment's sequence number.
+                </span>
+              </span>
+            </label>
+            <label class="mode-option mode-option-broken" for="mode-naive">
+              <input type="radio" name="mode" id="mode-naive" value="naive" />
+              <span class="mode-body">
+                <span class="mode-title">Naive split <span class="chip chip-broken">⚠ BROKEN</span></span>
+                <span class="mode-desc">
+                  Same cipher, unique nonces, no chaining. Each chunk is a valid standalone message.
+                </span>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+
+        <p class="mode-explain" id="mode-explain" role="status"></p>
+
+        <div class="segment-strip" role="region" aria-labelledby="strip-h" tabindex="0">
+          <h3 id="strip-h" class="strip-h">Sealed segments</h3>
+          <ol class="segments" id="segments" role="list"></ol>
+        </div>
+
+        <details class="disclosure">
+          <summary>The construction, byte for byte</summary>
+          <pre class="spec" role="region" aria-label="Stream Ward construction pseudocode" tabindex="0">
+DOMAIN = "crypto-lab/stream-ward/v1"
+
+chain[0]   = SHA-256( DOMAIN ‖ "chain-init" ‖ header )
+nonce[i]   = SHA-256( DOMAIN ‖ "nonce" ‖ chain[i] ‖ LE64(i) )[0..24]
+aad[i]     = DOMAIN ‖ "seg" ‖ LE64(i) ‖ chain[i]
+inner[i]   = flag[i] ‖ plaintext[i]      flag = 0x01 on the last segment, else 0x00
+ct[i]      = XChaCha20-Poly1305( key, nonce[i], aad[i] ).encrypt( inner[i] )
+chain[i+1] = SHA-256( DOMAIN ‖ "chain" ‖ chain[i] ‖ LE64(i) ‖ ct[i] )</pre
+          >
+          <p>
+            Three things follow, and they are exactly the three attacks. <strong>chain[i]</strong> absorbs every earlier
+            ciphertext <em>including its Poly1305 tag</em>, so a segment that moves lands on a chain state its tag does
+            not cover. <strong>LE64(i)</strong> sits in the associated data, so a segment also cannot change position
+            without changing what it was authenticated against. And the <strong>FINAL flag</strong> lives inside the
+            encrypted block — as it does in libsodium's <code>crypto_secretstream</code> — so a stream that stops early
+            ends on a segment that authenticates as MESSAGE, and the verifier can say so.
+          </p>
+          <p class="caveat">
+            <strong>chain[i] is not secret.</strong> It is derived from the public header and the ciphertexts, and an
+            attacker can compute it too. Confidentiality comes from the key alone; the chain buys ordering and
+            completeness, nothing more.
+          </p>
+        </details>
+      </section>
+
+      <!-- ── Exhibit 3 ─────────────────────────────────────────────────────── -->
+      <section class="card" aria-labelledby="attack-h">
+        <div class="exhibit-head">
+          <span class="exhibit-num">Exhibit 3</span>
+          <h2 id="attack-h">Break it yourself</h2>
+          <span class="chip chip-real">REAL CRYPTO</span>
+        </div>
+        <p class="lede">
+          You are now the attacker. You do not have the key, and you will not change a single byte inside any segment —
+          you only get to move segments around or throw them away. Then the real verifier runs.
+        </p>
+
+        <div class="controls" role="group" aria-label="Attacks">
+          <button type="button" class="btn btn-attack" id="atk-truncate">Truncate</button>
+          <button type="button" class="btn btn-attack" id="atk-reorder">Reorder</button>
+          <button type="button" class="btn btn-attack" id="atk-drop">Drop</button>
+          <button type="button" class="btn" id="atk-reset">Restore original</button>
+        </div>
+
+        <p class="attack-note" id="attack-note" role="status">
+          No attack applied — the stream is exactly as it was sealed.
+        </p>
+
+        <div class="verdict" id="verdict" role="status" aria-live="polite"></div>
+
+        <div class="delivered" id="delivered-wrap">
+          <h3 id="delivered-h">What the application receives</h3>
+          <div class="delivered-box" id="delivered" role="region" aria-labelledby="delivered-h" tabindex="0"></div>
+        </div>
+      </section>
+
+      <!-- ── Exhibit 4 ─────────────────────────────────────────────────────── -->
+      <section class="card" aria-labelledby="matrix-h">
+        <div class="exhibit-head">
+          <span class="exhibit-num">Exhibit 4</span>
+          <h2 id="matrix-h">Scorecard</h2>
+        </div>
+        <p class="lede">
+          Six experiments. Each cell fills in with what the verifier actually reported when you ran that combination —
+          nothing here is pre-written.
+          <span id="matrix-progress" role="status">0 of 6 run.</span>
+        </p>
+        <div class="table-wrap" role="region" aria-labelledby="matrix-h" tabindex="0">
+          <table class="matrix">
+            <caption class="visually-hidden">
+              Verifier outcome for each attack under each construction
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Attack</th>
+                <th scope="col">Chained — Stream Ward</th>
+                <th scope="col">Naive split</th>
+              </tr>
+            </thead>
+            <tbody id="matrix-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── Scoping ───────────────────────────────────────────────────────── -->
+      <section class="card scoping" aria-labelledby="scope-h">
+        <h2 id="scope-h">What this does and does not prove</h2>
+        <div class="scope-grid">
+          <div>
+            <h3>Real here</h3>
+            <ul>
+              <li>XChaCha20-Poly1305 from <code>@noble/ciphers</code>, pinned by the draft-irtf-cfrg-xchacha-03 KATs.</li>
+              <li>SHA-256 from <code>@noble/hashes</code>, pinned by FIPS 180-4 KATs.</li>
+              <li>The chaining, framing, wire format and verifier — hand-written in this repo so you can read them.</li>
+              <li>Every accept and every reject on this page is the genuine verifier's answer.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Modelled here</h3>
+            <ul>
+              <li>
+                Exhibit 1 only. Memory footprint is modelled from tracked buffer allocations, not measured process RSS.
+              </li>
+              <li>No file is read and no 10&nbsp;GiB of data exists; the allocation ledger is walked, not filled.</li>
+              <li>Real allocators add fragmentation, GC pressure and copy-on-write — all of which make it worse, not better.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Not proven, and out of scope</h3>
+            <ul>
+              <li>
+                <strong>Not production crypto.</strong> This is a teaching demo. Use libsodium's
+                <code>crypto_secretstream_xchacha20poly1305</code>, or an age/Tink streaming AEAD.
+              </li>
+              <li>No rekeying: a real secretstream ratchets its key so one stream can outlive its nonce space.</li>
+              <li>No random access — chaining is strictly sequential by design. Seekable formats need a different tree.</li>
+              <li>Nothing about traffic analysis: segment sizes and counts leak, and this demo does not pad them.</li>
+              <li>The key is generated per page load, held in memory only, and never stored or transmitted.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="glossary-h">
+        <h2 id="glossary-h">Glossary</h2>
+        <dl class="glossary">
+          <div>
+            <dt>AEAD</dt>
+            <dd>
+              Authenticated Encryption with Associated Data. Encrypts a message and produces a tag proving it was not
+              altered. "Associated data" is extra context that is authenticated but not encrypted.
+            </dd>
+          </div>
+          <div>
+            <dt>Poly1305 tag</dt>
+            <dd>The 16-byte authenticator. If one bit of the ciphertext, nonce, key or associated data differs, it fails.</dd>
+          </div>
+          <div>
+            <dt>Nonce</dt>
+            <dd>
+              A number used once. Reusing one with the same key is catastrophic, which is why XChaCha20's 24-byte nonce
+              is big enough to pick at random.
+            </dd>
+          </div>
+          <div>
+            <dt>Chain state</dt>
+            <dd>
+              A 32-byte running hash of everything sealed so far. Not secret — its job is to make each segment's tag
+              depend on its position and on all of its predecessors.
+            </dd>
+          </div>
+          <div>
+            <dt>Fail closed</dt>
+            <dd>When verification fails, produce an error and no plaintext — never a "best effort" partial result.</dd>
+          </div>
+        </dl>
+      </section>
+    </main>
+
+    <footer class="scripture-footer">
+      <p>
+        Related demos:
+        <a href="https://systemslibrarian.github.io/crypto-lab-chacha20-stream/">crypto-lab-chacha20-stream</a> ·
+        <a href="https://systemslibrarian.github.io/crypto-lab-poly1305-mac/">crypto-lab-poly1305-mac</a> ·
+        <a href="https://systemslibrarian.github.io/crypto-lab-nonce-guard/">crypto-lab-nonce-guard</a> ·
+        <a href="https://systemslibrarian.github.io/crypto-lab-hpke-envelope/">crypto-lab-hpke-envelope</a> ·
+        <a href="https://systemslibrarian.github.io/crypto-lab-ratchet-wire/">crypto-lab-ratchet-wire</a>
+      </p>
+      <p>So whether you eat or drink or whatever you do, do it all for the glory of God. — 1 Corinthians 10:31</p>
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
