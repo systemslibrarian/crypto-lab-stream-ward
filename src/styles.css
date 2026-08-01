@@ -12,7 +12,15 @@
   --panel: #111a25;
   --panel-2: #0d151f;
   --border: #253345;
-  --border-strong: #35486180;
+  /* Control boundaries (WCAG 2.1 SC 1.4.11). `#app select` is filled with
+     --panel-2 (#0d151f), which is 1.09:1 against --bg and 1.24:1 against
+     --panel, so the border is the only thing delineating the control. The old
+     value was #35486180 — 50% alpha, compositing to #202c3c on --bg for
+     1.35:1. Now opaque and on the same blue-steel hue, clearing 3:1 on every
+     surface a control sits on: 3.52:1 on --bg, 3.21:1 on --panel, 3.36:1 on
+     --panel-2. --border keeps its existing weight for decorative rules —
+     card outlines, dividers, table rules. */
+  --border-strong: #5b6b7f;
 
   --text: #e9eff7;
   --text-dim: #b3c1d4;
@@ -35,7 +43,9 @@
   --panel: #ffffff;
   --panel-2: #eef3f9;
   --border: #c4d0e0;
-  --border-strong: #9fb1c9;
+  /* Same fix, other direction: 3.33:1 on --bg, 3.58:1 on --panel, 3.21:1 on
+     --panel-2. The old #9fb1c9 measured 1.35:1 at best. */
+  --border-strong: #7b899b;
 
   --text: #0f1720;
   --text-dim: #3d4b5e;
