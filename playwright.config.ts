@@ -10,7 +10,10 @@ export default defineConfig({
     colorScheme: 'dark',
   },
   webServer: {
-    command: 'npm run preview -- --port 4287 --strictPort',
+    // Build first: `preview` only serves whatever is already in dist/, so without
+    // this a failed build would leave the previous good bundle in place and the
+    // suite would pass green against source that no longer compiles.
+    command: 'npm run build && npm run preview -- --port 4287 --strictPort',
     url: 'http://localhost:4287/crypto-lab-stream-ward/',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
