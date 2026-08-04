@@ -35,12 +35,17 @@ test('loads under the project subpath with no failed requests', async ({ page })
   expect(failures).toEqual([])
 })
 
-test('every asset the page pulls is served from under the base path', async ({ page }) => {
+test('every asset the page pulls is served from under the base path', async ({ page, baseURL }) => {
+  // Read the origin from the config instead of restating it: a second copy is how a
+  // port change gets half-applied, and a stale copy here would make the check either
+  // fail on every request or, worse, compare against nothing.
+  expect(baseURL, 'baseURL must be configured for this check to mean anything').toBeTruthy()
+  const base = baseURL as string
   const external: string[] = []
   page.on('request', (r) => {
     const url = r.url()
     if (url.startsWith('data:') || url.startsWith('blob:')) return
-    if (!url.startsWith('http://localhost:4287/crypto-lab-stream-ward/')) external.push(url)
+    if (!url.startsWith(base)) external.push(url)
   })
   await page.goto('.', { waitUntil: 'networkidle' })
   // No CDN scripts, no webfonts, no backend — the demo has to run offline from the subpath.
