@@ -139,7 +139,8 @@ body {
 }
 
 /* ── Hero ─────────────────────────────────────────────────────────────────── */
-/* BEGIN cl-hero standard — managed, keep in sync across fleet */
+/* Hero. THIS LAB OWNS IT — kept consistent with the fleet by review, never by
+   a script. The old "managed, keep in sync" block was retired. */
 .cl-hero {
   display: flex;
   align-items: flex-start;
@@ -200,7 +201,6 @@ body {
     width: 100%;
   }
 }
-/* END cl-hero standard */
 
 /* Demo overrides for the managed block above: the accent needs its full lightness to
    clear 4.5:1 on the light palette, so tint by colour rather than by opacity. */
