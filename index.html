@@ -459,7 +459,14 @@ chain[i+1] = SHA-256( DOMAIN ‖ "chain" ‖ chain[i] ‖ LE64(i) ‖ ct[i] )</p
           nothing here is pre-written.
           <span id="matrix-progress" role="status">0 of 6 run.</span>
         </p>
-        <div class="table-wrap" role="region" aria-labelledby="matrix-h" tabindex="0">
+        <!-- `role="group"`, not `role="region"`, and its own name rather than the
+           section heading. A region is a LANDMARK, and this scroller pointed its
+           `aria-labelledby` at the same <h2> the enclosing <section> uses — so the
+           page shipped two landmarks both named "Scorecard", which is what
+           `landmark-unique` fails on. A scrollable table is not a landmark; it is a
+           labelled group that needs keyboard access, which `tabindex="0"` gives it
+           (SC 2.1.1). -->
+        <div class="table-wrap" role="group" aria-label="Scorecard results table" tabindex="0">
           <table class="matrix">
             <caption class="visually-hidden">
               Verifier outcome for each attack under each construction

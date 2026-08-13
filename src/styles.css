@@ -29,6 +29,7 @@
   --ok: #43d9a3;
   --bad: #ff7b7b;
   --bad-ink: #240505;
+  --seg-idx-bad-ink: #7fb0ff;  /* index ink on the .is-bad tint: 6.31:1 on #27212a */
   --warn: #f0b429;
 
   --mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
@@ -51,9 +52,17 @@
   --text-dim: #3d4b5e;
   --text-muted: #52627a;
 
-  --ok: #0a7a52;
+  /* WCAG 1.4.3. This token is used BOTH as a graphic (the verdict border, 3:1)
+     and as ink on the verdict's own tinted panel, where 4.5:1 applies. At
+     #0a7a52 the ink measured 4.28:1 on the mixed background #dce8e9 — just
+     under, and only in the light theme, because the dark theme's #43d9a3 sits
+     at 9.48:1. The heading is 16.32px bold, i.e. 12.2pt, which is BELOW the
+     14pt-bold large-text threshold, so the 4.5:1 rule is the one that applies.
+     #0a6e4a measures 5.02:1 there and 6.28:1 on white. */
+  --ok: #0a6e4a;
   --bad: #b81f1f;
   --bad-ink: #ffffff;
+  --seg-idx-bad-ink: #1a56bd;  /* index ink on the .is-bad tint: 5.10:1 on #ecdcde */
   --warn: #7d5200;
 }
 
@@ -371,6 +380,16 @@ input[type='range'] {
 }
 #app .btn:disabled {
   cursor: not-allowed;
+  /* The fill must be muted TOGETHER with the ink. This rule used to change only
+     `color`, so a disabled `.btn-primary` kept its saturated `--accent` fill and
+     wore `--text-muted` on top of it: measured rgb(82, 98, 122) on
+     rgb(26, 95, 208) — 1.06:1, a label nobody can read.
+     SC 1.4.3 does exempt inactive controls from the contrast minimum, so this is
+     not strictly a violation while the element really is `disabled` — but axe
+     flagged it during the drive, i.e. in a state where the button carried this
+     styling without being disabled, and an unreadable label is worth fixing
+     either way. Muting both keeps the "unavailable" signal and the legibility. */
+  background: var(--panel-2);
   color: var(--text-muted);
   border-color: var(--border);
 }
@@ -380,14 +399,26 @@ input[type='range'] {
   border-color: var(--accent);
 }
 #app .btn-primary:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--accent) 82%, #ffffff);
+  /* Lightening the accent toward white on hover took the white label from 5.85:1
+     down to 4.02:1 — under the 4.5:1 this 14.72px text needs. A click leaves the
+     pointer on the button, so this is the state a visitor reads the result in.
+     Darkening instead keeps the "hover" signal and the legibility: the mix now
+     goes toward the page ink rather than toward white. */
+  background: color-mix(in oklab, var(--accent) 82%, #000000);
   color: var(--accent-ink);
 }
 #app .btn-attack {
   border-color: color-mix(in oklab, var(--bad) 55%, var(--border));
   color: var(--bad);
 }
-#app .btn-attack:hover:not(:disabled) {
+/* `:not([aria-pressed='true'])` matters. A click leaves the pointer ON the
+   button, so hover and pressed apply together — and this rule overrode the
+   PRESSED background while the pressed rule kept its own ink. The result was the
+   pressed ink on the hover fill: measured 1.87:1 in both themes (#240505 on
+   #59383e in dark, #ffffff on #e4b1ae in light) against the 4.5:1 this 14.72px
+   label needs. That is the state a visitor occupies immediately after firing an
+   attack, which is exactly when they read the result. */
+#app .btn-attack:hover:not(:disabled):not([aria-pressed='true']) {
   background: color-mix(in oklab, var(--bad) 14%, var(--panel-2));
   border-color: var(--bad);
 }
@@ -400,6 +431,17 @@ input[type='range'] {
 }
 #app .btn[aria-pressed='true']:hover {
   background: var(--bad);
+  color: var(--bad-ink);
+}
+
+/* `.btn-attack:hover` is (1,4,1) once it carries a `:not()`, so it outranks the
+   generic `[aria-pressed='true']:hover` above and repainted an ARMED attack
+   button with the hover tint while the pressed ink stayed — measured 1.92:1
+   (#240505 on #5c393f). This rule matches the same shape, so the armed pair
+   stays together in the state a visitor is in right after firing an attack. */
+#app .btn-attack[aria-pressed='true']:hover:not(:disabled) {
+  background: var(--bad);
+  border-color: var(--bad);
   color: var(--bad-ink);
 }
 
@@ -701,6 +743,16 @@ input[type='range'] {
   color: var(--accent);
   text-align: center;
 }
+/* WCAG 1.4.3. `--accent` is chosen against the page and panel surfaces, where it
+   clears 4.5:1. A segment marked `.is-bad` composites a red tint underneath it —
+   #ecdcde in the light theme — a surface those numbers never described, and the
+   index measured 4.41:1 there against the 4.5:1 this 12.8px bold text needs.
+   Scoped to `.is-bad` deliberately: the same ink on `.is-ok` and on the untinted
+   segments was measured and passes, so only the tinted case is darkened. */
+.is-bad > .seg-idx {
+  color: var(--seg-idx-bad-ink);
+}
+
 .seg-text {
   font-family: var(--mono);
   font-size: 0.84rem;
