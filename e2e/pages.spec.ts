@@ -72,5 +72,5 @@ test('the single banner landmark and the skip link survive the build', async ({ 
   await expect(page.locator('[role="banner"]')).toHaveCount(1)
   await expect(page.locator('a.cl-skip-link')).toHaveAttribute('href', '#app')
   await expect(page.locator('h1')).toHaveCount(1)
-  await expect(page.locator('#cl-theme-toggle')).toBeVisible()
+  await expect(page.locator('.cl-topbar')).toBeVisible()
 })
