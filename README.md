@@ -191,6 +191,7 @@ The a11y gate needs the Playwright browser once: `npx playwright install --with-
 - [crypto-lab-nonce-guard](https://systemslibrarian.github.io/crypto-lab-nonce-guard/) — nonce-misuse resistance, the other half of AEAD hygiene
 - [crypto-lab-hpke-envelope](https://systemslibrarian.github.io/crypto-lab-hpke-envelope/) — how the key reaches the receiver in the first place
 - [crypto-lab-ratchet-wire](https://systemslibrarian.github.io/crypto-lab-ratchet-wire/) — chaining taken further, into forward secrecy
+- [crypto-lab-sector-vault](https://systemslibrarian.github.io/crypto-lab-sector-vault/) — the same lesson in the storage domain: XTS-AES has no tag at all, and adding one still leaves a rolled-back sector authenticating perfectly
 
 ---
 
