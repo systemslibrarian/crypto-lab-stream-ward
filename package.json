@@ -11,13 +11,13 @@
     "test:a11y": "playwright test"
   },
   "dependencies": {
-    "@noble/ciphers": "^2.3.0",
-    "@noble/hashes": "^2.3.0"
+    "@noble/ciphers": "^2.4.0",
+    "@noble/hashes": "^2.4.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "1.62.1",
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.4.0",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vitest": "^4.1.10"
