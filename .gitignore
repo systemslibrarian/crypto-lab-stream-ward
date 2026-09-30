@@ -5,3 +5,4 @@ playwright-report/
 .shot.mjs
 *.local
 .DS_Store
+chat.md
