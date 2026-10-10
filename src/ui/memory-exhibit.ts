@@ -283,13 +283,13 @@ export function initMemoryExhibit(): void {
     const factor = formatCount(Math.round(needA / needB))
     if (a.oom) {
       verdict.textContent =
-        `At ${formatBytes(a.fileBytes)} with ${formatBytes(a.ramLimitBytes)} of RAM: one-shot is killed after ` +
+        `In this buffer API model, at ${formatBytes(a.fileBytes)} with ${formatBytes(a.ramLimitBytes)} of RAM: one-shot is killed after ` +
         `${formatBytes(a.oomAtBytes ?? 0)} — it needed ${formatBytes(needA)} to finish. The chunked stream ` +
         `authenticates all ${formatCount(b.segmentCount)} segments of the same file holding ${formatBytes(needB)}. ` +
         `Same cipher, same key, ${factor}× less memory.`
     } else {
       verdict.textContent =
-        `At ${formatBytes(a.fileBytes)} both finish — but one-shot needs ${formatBytes(needA)} against the chunked ` +
+        `In this buffer API model, at ${formatBytes(a.fileBytes)} both finish — but one-shot needs ${formatBytes(needA)} against the chunked ` +
         `stream's ${formatBytes(needB)} (${factor}× less). Drag the slider right until one-shot crosses the ceiling.`
     }
   }
