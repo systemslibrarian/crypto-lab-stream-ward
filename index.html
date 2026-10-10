@@ -181,8 +181,8 @@
         <aside class="cl-hero-why" aria-label="Why it matters">
           <span class="cl-hero-why-label">WHY IT MATTERS</span>
           <p class="cl-hero-why-text">
-            Every backup tool, video player and object store decrypts files larger than its own RAM, so all of them
-            chunk. Chunking without binding the chunks together lets anyone who can touch the bytes reorder or delete
+            Large-file consumers benefit from bounded buffers and early authenticated segment release.
+            Chunking without binding the chunks together lets anyone who can touch the bytes reorder or delete
             them and still hand your application a perfectly "authentic" file.
           </p>
         </aside>
@@ -192,9 +192,10 @@
         <h2 id="intro-h">What is this?</h2>
         <p>
           Authenticated encryption gives you one tag — one short fingerprint — that proves a message came from someone
-          holding the key and was not altered. To check that tag you need the whole message, which is fine for a chat
-          line and impossible for a 10&nbsp;GiB video. So real systems cut the file into segments and authenticate each
-          one separately.
+          holding the key and was not altered. Trusted plaintext release must wait until the whole-message tag
+          verifies. A one-shot buffer API can run out of RAM on a 10&nbsp;GiB video; staged storage or an
+          authenticate-then-decrypt reread can bound RAM instead, at an I/O and latency cost. Per-segment
+          authentication also permits earlier trusted release of each segment.
         </p>
         <p>
           That fixes the memory problem and quietly creates a new one. Each segment is now a valid little message on its
@@ -203,7 +204,7 @@
           nothing fails — unless the segments were chained together in the first place.
         </p>
         <p class="intro-lead">
-          This page shows both halves: <strong>the memory wall</strong> that forces you to chunk, and
+          This page shows both halves: <strong>the modeled buffer API's memory wall</strong>, and
           <strong>the authentication trap</strong> that chunking walks you into.
         </p>
       </section>
@@ -216,9 +217,10 @@
           <span class="chip chip-model">MODELLED</span>
         </div>
         <p class="lede">
-          One-shot AEAD cannot release a single byte of plaintext until the tag over the entire file verifies. So the
-          entire ciphertext has to be resident first, and then the plaintext buffer is allocated on top of it. Push the
-          file size up and watch where that ends.
+          Trusted plaintext release waits for the whole-file tag. In this one-shot buffer API model, the entire
+          ciphertext is retained in RAM and a separate plaintext buffer is allocated on top of it. This storage
+          assumption produces the two-file peak; a single tag does not inherently require it. Push the file size up
+          and watch where this model ends.
         </p>
 
         <p class="honesty-note" id="mem-honesty">
@@ -319,14 +321,18 @@
         </p>
 
         <details class="disclosure">
-          <summary>Why one-shot needs two copies of the file</summary>
+          <summary>Why this buffer API model holds two copies of the file</summary>
           <p>
             A Poly1305 tag is computed over every byte of the ciphertext. Until the last byte has gone through the
             accumulator you do not know whether the first byte is trustworthy, so a correct one-shot implementation
-            refuses to emit plaintext early — that refusal is the whole security property. The ciphertext therefore has
-            to be fully resident. Decryption then writes into a <em>separate</em> output buffer (this is what
-            <code>crypto_aead_xchacha20poly1305_ietf_decrypt</code> and WebCrypto's <code>decrypt()</code> both do), and
-            for a moment both buffers are live: peak ≈ 2 × file size.
+            withholds trusted plaintext until verification. The modeled buffer API also retains the full ciphertext
+            in RAM and writes into a <em>separate</em> output buffer, so both buffers are live: peak ≈ 2 × file size.
+            That peak describes this allocation strategy, not a lower bound for whole-message authentication.
+          </p>
+          <p>
+            Staged disk storage or an authenticate-then-decrypt reread of the same immutable ciphertext can bound RAM
+            with different I/O and latency. Staged plaintext remains untrusted until the tag verifies, and a reread
+            must prevent ciphertext changes between passes. These alternatives are not implemented or measured here.
           </p>
           <p>
             A chunked stream verifies a tag every segment, so it can hand that segment onward and free it before reading

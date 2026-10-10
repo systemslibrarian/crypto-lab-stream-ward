@@ -2,8 +2,8 @@
 
 **Streaming AEAD · XChaCha20-Poly1305 · secretstream-style chaining**
 
-A browser demo of why you cannot decrypt a large file in one shot — and why splitting it
-into chunks, on its own, is not the fix.
+A browser demo of a one-shot buffer API's memory ceiling — and why splitting a file
+into chunks, on its own, does not protect ordering or completeness.
 
 **Live demo:** https://systemslibrarian.github.io/crypto-lab-stream-ward/
 
@@ -12,13 +12,20 @@ into chunks, on its own, is not the fix.
 ## What It Is
 
 One-shot authenticated encryption puts a single Poly1305 tag over an entire message. That
-tag cannot be checked until the last byte has been read, so a correct implementation
-refuses to release any plaintext before then — which means the whole ciphertext has to be
-resident in memory, and the plaintext output buffer is allocated on top of it. Peak memory
-is roughly **two times the file size**, chosen not by you but by whoever uploaded the file.
+tag cannot be checked until the last byte has been read, so trusted plaintext release must
+wait for whole-message authentication. **In the one-shot buffer API model shown here**, the
+whole ciphertext stays in RAM while a separate plaintext output buffer is allocated. Its
+modeled peak is roughly **two times the file size**; this is an API/storage assumption,
+not an inherent memory requirement of one authentication tag.
+
+Staged disk storage or an authenticate-then-decrypt reread of the same immutable ciphertext
+can bound RAM while retaining whole-message authentication, with different I/O and latency.
+Any staged plaintext remains untrusted until the tag verifies; a reread must not allow the
+authenticated ciphertext to change between passes. These alternatives are not implemented
+or measured by this allocation model.
 
 The fix everyone reaches for is to cut the file into segments and authenticate each one.
-That solves the memory problem completely and introduces a new one: each segment is now a
+That bounds this model's per-segment buffers and introduces a new one: each segment is now a
 valid standalone message, so an attacker who cannot read or forge a single byte can still
 **reorder, delete, or truncate** the segment list, and every surviving tag still verifies.
 The application is handed a file the sender never wrote, with no error raised.

@@ -7,15 +7,19 @@
  * UI read that ledger. So the numbers are derived from tracked buffer allocations —
  * they are not a hand-drawn curve, and they are not process RSS either.
  *
- * The two strategies differ in exactly one structural way:
+ * These are two particular buffer API strategies, not every storage strategy:
  *
  *   One-shot  — a single AEAD tag covers the whole file, so not one byte of plaintext
  *               may be released until the last byte of ciphertext has been read. The
- *               entire ciphertext must be resident, and then the plaintext output
- *               buffer is allocated on top of it. Peak ≈ 2 × file size.
+ *               modeled API keeps the entire ciphertext resident, then allocates
+ *               a separate plaintext output buffer. Peak ≈ 2 × file size.
  *   Chunked   — each segment carries its own tag, so a segment can be verified,
  *               released and freed before the next one is read. Peak ≈ 2 × chunk size,
  *               flat in the file size.
+ * A single tag does not inherently require whole-file RAM. Staged disk storage
+ * or authenticate-then-decrypt rereading of the same immutable ciphertext can
+ * bound RAM, trading I/O and latency. Staged plaintext stays untrusted until
+ * authentication succeeds. Neither alternative is implemented or measured here.
  */
 
 /** Long-lived state a streaming decryptor holds: key + stream header + chain state + nonce. */
@@ -98,8 +102,8 @@ export class AllocTracker {
 const SAMPLE_TARGET = 180
 
 /**
- * One-shot AEAD decrypt: buffer the entire ciphertext, verify the single tag over all
- * of it, then allocate the plaintext output buffer.
+ * Modeled one-shot buffer API: buffer the entire ciphertext, verify its tag,
+ * then allocate a separate plaintext output buffer. This is not a RAM lower bound.
  */
 export function simulateOneShot(fileBytes: number, ramLimitBytes: number, chunkBytes: number): MemoryRun {
   const t = new AllocTracker()
