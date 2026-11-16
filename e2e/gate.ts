@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, type Page } from '@playwright/test'
+import { auditControlNames, formatControlNameFailures } from './control-names'
 
 export const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 
@@ -179,6 +180,11 @@ export async function scan(page: Page, label: string): Promise<void> {
     meaningfulIncomplete.map(shape),
     `axe incomplete (prohibited ARIA lives here) in state: ${label}`,
   ).toEqual([])
+
+  // axe's `label` rule accepts a bare `placeholder` as an accessible name, so a
+  // deleted label can leave this gate green. See `control-names.ts`.
+  const unnamed = formatControlNameFailures(await auditControlNames(page))
+  expect(unnamed, `form controls named only by placeholder/title in state: ${label}`).toEqual([])
 
   await expectNoHorizontalOverflow(page, label)
   await expectHiddenActuallyHides(page, label)
