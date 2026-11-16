@@ -182,7 +182,7 @@ cd crypto-lab-stream-ward
 npm install
 npm run dev          # http://localhost:5173/crypto-lab-stream-ward/
 
-npm test             # 81 unit tests, including 8 spec KATs
+npm test             # 84 unit tests, including 8 spec KATs
 npm run build        # typecheck + production build
 npm run test:a11y    # WCAG 2.1 AA gate against the production build, both themes
 ```
@@ -204,14 +204,15 @@ The a11y gate needs the Playwright browser once: `npx playwright install --with-
 
 ## Build & Verify
 
-**81 unit tests (Vitest), 8 of them spec KATs**, run in CI before anything is built:
+**84 unit tests (Vitest), 8 of them spec KATs**, run in CI before anything is built:
 
 | KAT | Source |
 | --- | --- |
 | AEAD_XCHACHA20_POLY1305 encrypt / decrypt / AAD rejection | `draft-irtf-cfrg-xchacha-03` §A.1, §A.3.1 |
 | ChaCha20 encryption at block counter 1 | RFC 8439 §2.4.2 |
 | Poly1305 one-time authenticator | RFC 8439 §2.5.2 |
-| SHA-256 (empty, `"abc"`, two-block) | FIPS 180-4 |
+| SHA-256 (`"abc"`, two-block) | NIST, "Examples with Intermediate Values": SHA-256 |
+| SHA-256 (empty) | NIST CAVP `SHA256ShortMsg.rsp`, Len = 0 |
 
 KAT file: [`src/stream/kat.test.ts`](src/stream/kat.test.ts). The rest cover round-trips,
 nonce and chain hygiene, strict wire parsing, and the attack surface:

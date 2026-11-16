@@ -488,7 +488,7 @@ chain[i+1] = SHA-256( DOMAIN ‖ "chain" ‖ chain[i] ‖ LE64(i) ‖ ct[i] )</p
             <h3>Real here</h3>
             <ul>
               <li>XChaCha20-Poly1305 from <code>@noble/ciphers</code>, pinned by the draft-irtf-cfrg-xchacha-03 KATs.</li>
-              <li>SHA-256 from <code>@noble/hashes</code>, pinned by FIPS 180-4 KATs.</li>
+              <li>SHA-256 from <code>@noble/hashes</code>, pinned by NIST’s published SHA-256 example values (the one-block and two-block messages FIPS 180-4 §A.2 points to) and by CAVP’s zero-length short-message vector.</li>
               <li>The chaining, framing, wire format and verifier — hand-written in this repo so you can read them.</li>
               <li>Every accept and every reject on this page is the genuine verifier's answer.</li>
             </ul>

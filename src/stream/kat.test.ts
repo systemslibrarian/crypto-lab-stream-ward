@@ -8,7 +8,8 @@
  *   draft-irtf-cfrg-xchacha-03, Appendix A.1 / A.3.1  — AEAD_XCHACHA20_POLY1305
  *   RFC 8439 §2.4.2                                   — ChaCha20 encryption
  *   RFC 8439 §2.5.2                                   — Poly1305 one-time authenticator
- *   FIPS 180-4 / NIST CAVP short messages             — SHA-256
+ *   NIST "Examples with Intermediate Values", SHA256  — SHA-256 "abc" and two-block
+ *   NIST CAVP SHA256ShortMsg.rsp, Len = 0             — SHA-256 of the empty string
  */
 
 import { chacha20, xchacha20poly1305 } from '@noble/ciphers/chacha.js'
@@ -81,7 +82,7 @@ describe('KAT — Poly1305 (RFC 8439 §2.5.2)', () => {
   })
 })
 
-describe('KAT — SHA-256 (FIPS 180-4)', () => {
+describe('KAT — SHA-256 (NIST published example values)', () => {
   it('hashes the empty string', () => {
     expect(toHex(sha256(new Uint8Array(0)))).toBe(
       'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',

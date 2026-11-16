@@ -3,9 +3,10 @@
  *
  * Hand-rolled on top of real XChaCha20-Poly1305 (@noble/ciphers, verified against
  * draft-irtf-cfrg-xchacha-03 Appendix A.1 / A.3.1 KATs in kat.test.ts) and real SHA-256
- * (@noble/hashes, verified against FIPS 180-4 KATs). The *chaining* — the part this
- * demo exists to teach — is written out here in full rather than hidden in a library,
- * so every byte that goes into an authenticator is inspectable.
+ * (@noble/hashes, verified against NIST's published SHA-256 example values). The
+ * *chaining* — the part this demo exists to teach — is written out here in full
+ * rather than hidden in a library, so every byte that goes into an
+ * authenticator is inspectable.
  *
  * Construction, per segment i of n:
  *
