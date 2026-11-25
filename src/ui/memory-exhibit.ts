@@ -182,6 +182,8 @@ export function initMemoryExhibit(): void {
   })
 
   function resetPanels(): void {
+    cancelAnimationFrame(frame)
+    runBtn.disabled = false
     for (const p of [oneShot, chunked]) {
       p.status.textContent = 'Idle — press “Run both decrypts”.'
       p.status.classList.remove('is-oom', 'is-ok')
@@ -265,15 +267,13 @@ export function initMemoryExhibit(): void {
     if (run.strategy === 'one-shot') {
       p.extra.textContent = formatCount(run.allocCount)
       p.status.textContent = run.oom
-        ? `✕ OOM — process killed. It blew the ${formatBytes(run.ramLimitBytes)} ceiling ` +
-          `${run.oomAtBytes === run.fileBytes ? 'while allocating the plaintext output buffer' : `after reading ${formatBytes(run.oomAtBytes ?? 0)} of the file`}.`
-        : `✓ Completed. Ciphertext and plaintext were both resident at once — peak ${formatBytes(run.peakBytes)}.`
+        ? `✕ OOM in the model. The allocation reached ${formatCount(run.peakBytes)} bytes, above the limit of ${formatCount(run.ramLimitBytes)} bytes.`
+        : `✓ Completed. Ciphertext and plaintext were both resident at once. Modelled peak: ${formatCount(run.peakBytes)} bytes.`
     } else {
       p.extra.textContent = formatCount(run.segmentCount)
       p.status.textContent = run.oom
-        ? `✕ OOM — the segment size alone exceeds the ceiling.`
-        : `✓ Completed ${formatCount(run.segmentCount)} segments. Never held more than ` +
-          `${formatBytes(run.peakBytes)} — one segment in, one segment out.`
+        ? `✕ OOM in the model. Segment buffers and stream state reached ${formatCount(run.peakBytes)} bytes, above the limit of ${formatCount(run.ramLimitBytes)} bytes.`
+        : `✓ Completed ${formatCount(run.segmentCount)} segments. The modelled peak was ${formatCount(run.peakBytes)} bytes, including the input, output and stream state.`
     }
   }
 
@@ -283,14 +283,14 @@ export function initMemoryExhibit(): void {
     const factor = formatCount(Math.round(needA / needB))
     if (a.oom) {
       verdict.textContent =
-        `In this buffer API model, at ${formatBytes(a.fileBytes)} with ${formatBytes(a.ramLimitBytes)} of RAM: one-shot is killed after ` +
-        `${formatBytes(a.oomAtBytes ?? 0)} — it needed ${formatBytes(needA)} to finish. The chunked stream ` +
-        `authenticates all ${formatCount(b.segmentCount)} segments of the same file holding ${formatBytes(needB)}. ` +
+        `In this buffer API model, the one-shot allocation reached ${formatCount(a.peakBytes)} bytes, exceeding the ` +
+        `${formatCount(a.ramLimitBytes)}-byte ceiling. It would need ${formatCount(needA)} bytes to finish. The chunked stream ` +
+        `authenticates all ${formatCount(b.segmentCount)} segments with a peak of ${formatCount(b.peakBytes)} bytes. ` +
         `Same cipher, same key, ${factor}× less memory.`
     } else {
       verdict.textContent =
-        `In this buffer API model, at ${formatBytes(a.fileBytes)} both finish — but one-shot needs ${formatBytes(needA)} against the chunked ` +
-        `stream's ${formatBytes(needB)} (${factor}× less). Drag the slider right until one-shot crosses the ceiling.`
+        `In this buffer API model, at ${formatBytes(a.fileBytes)} both finish. One-shot needs ${formatCount(needA)} bytes against the chunked ` +
+        `stream's ${formatCount(needB)} bytes (${factor}× less). Drag the slider right until one-shot crosses the ceiling.`
     }
   }
 

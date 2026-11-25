@@ -74,3 +74,43 @@ test('the single banner landmark and the skip link survive the build', async ({ 
   await expect(page.locator('h1')).toHaveCount(1)
   await expect(page.locator('.cl-topbar')).toBeVisible()
 })
+
+test('the memory verdict includes framing and state in the exact peak', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('./')
+  await page.locator('#run-memory').click()
+  const limit = 2 ** 31
+  const stateBytes = 32 + 24 + 32 + 24
+  const frameOverhead = 1 + 16
+  const peak = (chunk: number) => (2 * chunk + frameOverhead + stateBytes).toLocaleString('en-US')
+  await expect(page.locator('#status-oneshot')).toContainText(
+    `${(limit + stateBytes).toLocaleString('en-US')} bytes, above the limit of ${limit.toLocaleString('en-US')} bytes`,
+  )
+  await expect(page.locator('#status-chunked')).toContainText(`${peak(65536)} bytes`)
+  await expect(page.locator('#memory-verdict')).toContainText(`peak of ${peak(65536)} bytes`)
+
+  await page.locator('#chunk-size').selectOption('16384')
+  await page.locator('#run-memory').click()
+  await expect(page.locator('#memory-verdict')).toContainText(`peak of ${peak(16384)} bytes`)
+  await page.locator('#file-size').fill('0')
+  await page.locator('#run-memory').click()
+  await expect(page.locator('#status-oneshot')).toContainText('2,097,264 bytes')
+  await expect(page.locator('#memory-verdict')).toContainText('both finish')
+})
+
+test('changing a setting retires an animated memory run', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.clock.install()
+  await page.goto('./')
+  const run = page.locator('#run-memory')
+  await run.click()
+  await expect(run).toBeDisabled()
+  await page.locator('#chunk-size').selectOption('16384')
+  await expect(run).toBeEnabled()
+  await page.clock.runFor(6000)
+  await expect(page.locator('#status-chunked')).toContainText('Idle')
+  await expect(page.locator('#peak-chunked')).toHaveText('—')
+  await run.click()
+  await page.clock.runFor(6000)
+  await expect(page.locator('#status-chunked')).toContainText('32,897 bytes')
+})
